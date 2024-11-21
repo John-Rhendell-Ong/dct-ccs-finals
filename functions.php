@@ -160,4 +160,27 @@ function fetchSubjects() {
     }
 }
 
+function fetchStudents() {
+    // Use the existing getConnection function to establish a connection to the database
+    $dbConnection = getConnection();
+
+    try {
+        // SQL query to retrieve all student records
+        $query = "SELECT * FROM students";
+        $stmt = $dbConnection->prepare($query);
+
+        // Execute the query
+        $stmt->execute();
+
+        // Fetch all student records as an associative array
+        $studentRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Return the student records
+        return $studentRecords;
+    } catch (PDOException $exception) {
+        // In case of an error, return an empty array
+        return [];
+    }
+}
+
 ?>
