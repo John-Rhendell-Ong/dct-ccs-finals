@@ -1,5 +1,4 @@
 <?php
-
 session_start(); // Initialize the session
 
 // Establishes database connection
@@ -61,9 +60,13 @@ function authenticate($email, $password) {
 }
 
 // Logs out the current user
-function signOut() {
+function performLogout($redirectUrl) {
+    // Destroy the session
+    session_unset();
     session_destroy();
-    header("Location: /index.php");
+
+    // Redirect to the specified URL after logging out
+    header("Location: $redirectUrl");
     exit();
 }
 
@@ -115,5 +118,4 @@ function listSubjects() {
         echo '<tr><td colspan="3" class="text-center">No subjects found.</td></tr>';
     }
 }
-?>
 ?>
