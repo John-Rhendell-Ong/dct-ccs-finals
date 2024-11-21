@@ -118,4 +118,13 @@ function listSubjects() {
         echo '<tr><td colspan="3" class="text-center">No subjects found.</td></tr>';
     }
 }
+
+function guardDashboard() {
+    // Check if user is logged in (you can modify this check based on your needs)
+    if (!isset($_SESSION['user_email'])) {
+        // Redirect to login page if not logged in
+        header("Location: ../index.php");
+        exit();
+    }
+}
 ?>
