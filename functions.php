@@ -183,4 +183,50 @@ function fetchStudents() {
     }
 }
 
+function getStudentPassFailCounts() {
+    try {
+        // Get the database connection using the existing getConnection function
+        $dbConnection = getConnection();
+
+        // SQL query to calculate total grades and subject counts for each student
+        $query = "SELECT student_id, 
+                         SUM(grade) AS total_grades, 
+                         COUNT(subject_id) AS subject_count 
+                  FROM students_subjects 
+                  GROUP BY student_id";
+
+        // Prepare and execute the query
+        $stmt = $dbConnection->prepare($query);
+        $stmt->execute();
+
+        // Fetch all the results as an associative array
+        $studentData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Initialize counters for passed and failed students
+        $studentsPassed = 0;
+        $studentsFailed = 0;
+
+        // Iterate through each student's data
+        foreach ($studentData as $data) {
+            $averageGrade = $data['total_grades'] / $data['subject_count'];
+
+            // Count the student as passed or failed based on average grade
+            if ($averageGrade >= 75) {
+                $studentsPassed++;
+            } else {
+                $studentsFailed++; 
+            }
+        }
+
+        // Return an array with the pass and fail counts
+        return [
+            'passed' => $studentsPassed,
+            'failed' => $studentsFailed
+        ];
+    } catch (PDOException $exception) {
+        // Return an error message if something goes wrong
+        return "Error: " . $exception->getMessage();
+    }
+}
+
 ?>
