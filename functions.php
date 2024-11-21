@@ -134,4 +134,30 @@ function guardDashboard(){
     }
 }
 
+function fetchSubjects() {
+    // Establish the database connection
+    $conn = getConnection();
+
+    try {
+        // SQL query to select all records from the subjects table
+        $sql = "SELECT * FROM subjects";
+        $stmt = $conn->prepare($sql);
+
+        // Execute the query
+        $stmt->execute();
+
+        // Fetch all results as an associative array
+        $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Return the subjects array
+        return $subjects;
+    } catch (PDOException $e) {
+        // Log the error message if needed (optional)
+        // error_log($e->getMessage());
+
+        // Return an empty array in case of error
+        return [];
+    }
+}
+
 ?>
