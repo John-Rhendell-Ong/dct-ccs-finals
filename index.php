@@ -1,6 +1,7 @@
 <?php
-require_once 'utilities.php'; 
-redirectIfLoggedIn(); 
+require_once 'functions.php'; // Ensure this path is correct
+
+redirectIfLoggedIn(); // Redirect if the user is already logged in
 
 $errorFeedback = ''; 
 
@@ -9,13 +10,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userEmail = $_POST['email'];
     $userPass = $_POST['password'];
 
+    // Authenticate the user
+    $loginStatus = authenticate($userEmail, $userPass); // Call the authenticate function
+
     if ($loginStatus === true) {
-        // Redirect to the dashboard if credentials are valid
+        // Redirect to the dashboard if login is successful
         header("Location: admin/dashboard.php");
         exit();
     } else {
-        // Capture and display error if login fails
-        $errorFeedback = $loginStatus;
+        // Capture and display the error message if login fails
+        $errorFeedback = $loginStatus; // The errorFeedback will contain HTML-formatted alert
     }
 }
 ?>
@@ -34,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="d-flex align-items-center justify-content-center vh-100">
         <div class="col-4">
             <?php if ($errorFeedback): ?>
-                <?php echo $errorFeedback; ?>
+                <?php echo $errorFeedback; ?> <!-- Show error feedback -->
             <?php endif; ?>
             <div class="card shadow-sm">
                 <div class="card-body">
