@@ -127,4 +127,19 @@ function guardDashboard() {
         exit();
     }
 }
+
+// In your functions.php
+
+// Count all subjects in the database
+function countAllSubjects() {
+    $db = dbConnect(); // Assuming dbConnect() is already defined to connect to your database
+    $query = "SELECT COUNT(*) AS total FROM subjects"; // Query to count all subjects
+    $result = $db->query($query);
+
+    if ($result) {
+        $data = $result->fetch_assoc();
+        return $data['total']; // Return the count of subjects
+    }
+    return 0; // If something goes wrong, return 0
+}
 ?>
