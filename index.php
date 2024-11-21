@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userPass = $_POST['password'];
 
     // Authenticate the user
-    $loginStatus = authenticate($userEmail, $userPass); // Call the authenticate function
+    $loginStatus = authenticateUser($userEmail, $userPass); // Updated function name
 
     if ($loginStatus === true) {
         // Redirect to the dashboard if login is successful

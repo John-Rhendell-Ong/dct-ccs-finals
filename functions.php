@@ -1,145 +1,137 @@
 <?php
-session_start(); // Initialize the session
+// Session initialization for the user
+session_start();
 
-// Establishes database connection
-function dbConnect() {
-    $host = "localhost";
-    $user = "root";
-    $pass = "";
-    $database = "dct-ccs-finals";
-    $connection = new mysqli($host, $user, $pass, $database);
-    
-    if ($connection->connect_error) {
-        die("Connection failed: " . $connection->connect_error);
-    }
-    return $connection;
+// Helper function to retrieve POST data safely
+function retrievePostData($key) {
+    return isset($_POST[$key]) ? $_POST[$key] : null;
 }
 
-// Generates a dismissable alert for errors and success
-function showAlert($type, $content) {
-    $alertType = $type === 'error' ? 'alert-danger' : 'alert-success';
-    $prefix = $type === 'error' ? '<strong>Error!</strong> ' : '<strong>Success!</strong> ';
-    return '<div class="alert ' . $alertType . ' alert-dismissible fade show" role="alert">' .
-           $prefix . $content .
-           '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-}
-
-// Redirects authenticated users to the appropriate page
+// Function to redirect to the dashboard if the user is already logged in
 function redirectIfLoggedIn() {
-    if (!empty($_SESSION["user_email"])) {
-        $redirectUrl = $_SESSION['redirect_to'] ?? '/admin/dashboard.php';
-        header("Location: $redirectUrl");
+    $dashboardURL = 'admin/dashboard.php';
+
+    if (isset($_SESSION['email'])) {
+        header("Location: $dashboardURL");
+        exit(); // Ensure no further code is executed
+    }
+}
+
+// Function to restrict access to the dashboard for non-logged-in users
+function restrictDashboardAccess() {
+    $loginPageURL = '../index.php';
+    if (!isset($_SESSION['email'])) {
+        header("Location: $loginPageURL");
         exit();
     }
 }
 
-// Handles user login authentication
-function authenticate($email, $password) {
-    if (empty($email) || empty($password)) {
-        return showAlert('error', "<li>Email and password are required.</li>");
+// Establishes a connection to the database using PDO
+function createDatabaseConnection() {
+    $hostname = 'localhost';
+    $databaseName = 'dct-ccs-finals';
+    $username = 'root';
+    $password = '';
+    $charset = 'utf8mb4';
+
+    try {
+        $dsn = "mysql:host=$hostname;dbname=$databaseName;charset=$charset";
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+        return new PDO($dsn, $username, $password, $options);
+    } catch (PDOException $exception) {
+        die("Database connection failed: " . $exception->getMessage());
     }
-
-    if (!str_ends_with($email, '@gmail.com')) {
-        return showAlert('error', "<li>Email format is invalid.</li>");
-    }
-
-    $db = dbConnect();
-    $hashedPass = md5($password); // Simplistic hash for demonstration
-    $query = "SELECT * FROM users WHERE email = ? AND password = ?";
-    $stmt = $db->prepare($query);
-    $stmt->bind_param("ss", $email, $hashedPass);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $_SESSION['user_email'] = $email;
-        return true;
-    }
-
-    return showAlert('error', "<li>Invalid email or password.</li>");
 }
 
-// Logs out the current user
-function performLogout($redirectUrl) {
-    // Destroy the session
-    session_unset();
+// Function to authenticate the user login
+function authenticateUser($email, $password) {
+    // Validate email and password
+    $validationErrors = validateUserLogin($email, $password);
+    if (count($validationErrors) > 0) {
+        echo showErrorMessages($validationErrors);
+        return;
+    }
+
+    // Establish database connection
+    $dbConnection = createDatabaseConnection();
+
+    // Encrypt the password
+    $encryptedPassword = md5($password);
+
+    // Check if the email and password match a user in the database
+    $query = "SELECT * FROM users WHERE email = :email AND password = :password";
+    $statement = $dbConnection->prepare($query);
+    $statement->bindParam(':email', $email);
+    $statement->bindParam(':password', $encryptedPassword);
+    
+    $statement->execute();
+
+    // Fetch user details if a match is found
+    $user = $statement->fetch();
+    if ($user) {
+        $_SESSION['email'] = $user['email'];
+        header("Location: admin/dashboard.php");
+        exit(); // Stop further script execution after redirection
+    } else {
+        echo showErrorMessages(["Invalid email or password"]);
+    }
+}
+
+// Function to validate login credentials (email and password)
+function validateUserLogin($email, $password) {
+    $errors = [];
+
+    if (empty($email)) {
+        $errors[] = "Email is required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid email format.";
+    }
+
+    if (empty($password)) {
+        $errors[] = "Password is required.";
+    }
+
+    return $errors;
+}
+
+// Function to display errors in a formatted alert box
+function showErrorMessages($errors) {
+    if (empty($errors)) return "";
+
+    $errorMessages = '<div class="alert alert-danger alert-dismissible fade show" role="alert"><strong>Alert</strong><ul>';
+
+    foreach ($errors as $error) {
+        $errorMessages .= '<li>' . htmlspecialchars($error) . '</li>';
+    }
+
+    $errorMessages .= '</ul><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+
+    return $errorMessages;
+}
+
+function performLogout($redirectTo) {
+    // Remove the 'email' session data
+    if (isset($_SESSION['email'])) {
+        unset($_SESSION['email']);
+    }
+
+    // End the session completely
     session_destroy();
 
-    // Redirect to the specified URL after logging out
-    header("Location: $redirectUrl");
+    // Redirect to the specified page
+    header("Location: $redirectTo");
     exit();
 }
 
-// Adds a new subject to the database
-function addSubject($code, $name) {
-    if (empty($code) || empty($name)) {
-        return showAlert('error', "<li>Both subject code and name are required.</li>");
-    }
-
-    $db = dbConnect();
-    $query = "SELECT COUNT(*) AS count FROM subjects WHERE subject_code = ? OR subject_name = ?";
-    $stmt = $db->prepare($query);
-    $stmt->bind_param("ss", $code, $name);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $exists = $result->fetch_assoc()['count'] > 0;
-
-    if ($exists) {
-        return showAlert('error', "<li>Duplicate subject code or name detected.</li>");
-    }
-
-    $insertQuery = "INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)";
-    $insertStmt = $db->prepare($insertQuery);
-    $insertStmt->bind_param("ss", $code, $name);
-
-    if ($insertStmt->execute()) {
-        return showAlert('success', "<li>Subject successfully added.</li>");
-    }
-
-    return showAlert('error', "<li>Failed to add subject: " . $insertStmt->error . "</li>");
-}
-
-// Fetch and display all subjects
-function listSubjects() {
-    $db = dbConnect();
-    $query = "SELECT * FROM subjects";
-    $result = $db->query($query);
-
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            echo '<tr>';
-            echo '<td>' . htmlspecialchars($row['subject_code']) . '</td>';
-            echo '<td>' . htmlspecialchars($row['subject_name']) . '</td>';
-            echo '<td><a href="edit.php?code=' . urlencode($row['subject_code']) . '" class="btn btn-info">Edit</a> ';
-            echo '<a href="delete.php?code=' . urlencode($row['subject_code']) . '" class="btn btn-danger">Delete</a></td>';
-            echo '</tr>';
-        }
-    } else {
-        echo '<tr><td colspan="3" class="text-center">No subjects found.</td></tr>';
+function guardDashboard(){
+    $loginPage = '../index.php';
+    if(!isset($_SESSION['email'])){
+        header("Location: $loginPage");
     }
 }
 
-function guardDashboard() {
-    // Check if user is logged in (you can modify this check based on your needs)
-    if (!isset($_SESSION['user_email'])) {
-        // Redirect to login page if not logged in
-        header("Location: ../index.php");
-        exit();
-    }
-}
-
-// In your functions.php
-
-// Count all subjects in the database
-function countAllSubjects() {
-    $db = dbConnect(); // Assuming dbConnect() is already defined to connect to your database
-    $query = "SELECT COUNT(*) AS total FROM subjects"; // Query to count all subjects
-    $result = $db->query($query);
-
-    if ($result) {
-        $data = $result->fetch_assoc();
-        return $data['total']; // Return the count of subjects
-    }
-    return 0; // If something goes wrong, return 0
-}
 ?>
