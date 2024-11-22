@@ -1,3 +1,18 @@
+<?php
+require '../functions.php';
+guardDashboard();
+
+$logoutPage = 'logout.php';
+$subjectPage = './subject/add.php';
+$studentPage = './student/register.php';
+require './partials/header.php';
+require './partials/side-bar.php';
+
+$total_subjects = countAllSubjects();
+$total_students = countAllStudents();
+$failedAndPassed = calculateTotalPassedAndFailedStudents();
+?>
+
 <!-- Template Files here -->
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 pt-5">    
     <h1 class="h2">Dashboard</h1>        
@@ -38,4 +53,10 @@
     </div>    
 </main>
 <!-- Template Files here -->
+<<<<<<< HEAD
 
+=======
+<?php
+    require './partials/footer.php';
+?>
+>>>>>>> features/dashboard-ui
