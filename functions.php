@@ -229,4 +229,32 @@ function getStudentPassFailCounts() {
     }
 }
 
+function removeSubject($subjectCode, $redirectUrl) {
+    try {
+        // Establish a database connection
+        $pdoConnection = getConnection();
+
+        // Prepare the SQL query to delete the subject
+        $query = "DELETE FROM subjects WHERE subject_code = :subject_code";
+        $stmt = $pdoConnection->prepare($query);
+
+        // Bind the subject code parameter
+        $stmt->bindParam(':subject_code', $subjectCode, PDO::PARAM_STR);
+
+        // Execute the deletion query
+        if ($stmt->execute()) {
+            // Redirect to the given page after successful deletion
+            header("Location: $redirectUrl");
+            exit;
+        } else {
+            // Return an error message if deletion fails
+            return "Failed to delete the subject with code $subjectCode.";
+        }
+    } catch (PDOException $exception) {
+        // Return the error message in case of a database exception
+        return "Database error: " . $exception->getMessage();
+    }
+}
+
+
 ?>
