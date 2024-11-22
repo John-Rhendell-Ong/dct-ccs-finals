@@ -1,31 +1,26 @@
 <?php
-// Include necessary files
-include '../../functions.php'; // Functions for database and form handling
-include '../partials/header.php'; // Header for the page
+include '../../functions.php'; // Include the functions
+include '../partials/header.php';
 
-// Define navigation URLs
-$logoutUrl = '../logout.php';
-$dashboardUrl = '../dashboard.php';
-$studentRegistrationUrl = '../student/register.php';
-$subjectListUrl = './add.php'; // Subject List page
-
-// Include sidebar for navigation
+// Pages
+$logoutPage = '../logout.php';
+$dashboardPage = '../dashboard.php';
+$studentPage = '../student/register.php';
+$subjectPage = './add.php';
 include '../partials/side-bar.php';
 
-// Fetch the subject data based on the provided subject code from the URL
-if (isset($_GET['subject_code'])) {
-    $subjectCode = $_GET['subject_code'];
-    $subject_data = getSubjectByCode($subjectCode);
-} else {
-    echo "Error: Subject code not provided.";
-    exit; // If the subject code is not passed, stop execution
-}
+// Get the subject data based on subject code
+$subject_data = getSubjectByCode($_GET['subject_code']);
 
+// Handle form submission to update the subject
+if (isPost()) {
+    $subject_code = $subject_data['subject_code'];
+    $subject_name = postData('subject_name');
+    $updateStatus = updateSubject($subject_code, $subject_name, $subjectPage);
+}
 ?>
 
-<!-- Main Content Area -->
 <div class="col-md-9 col-lg-10">
-
     <h3 class="text-left mb-5 mt-5">Edit Subject</h3>
 
     <!-- Breadcrumb Navigation -->
@@ -37,23 +32,15 @@ if (isset($_GET['subject_code'])) {
         </ol>
     </nav>
 
-    <?php
-    // Handle form submission to update the subject data
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Get the posted subject name and use the subject code to update the database
-        $subjectName = postData('subject_name');
-        if (updateSubject($subjectCode, $subjectName)) {
-            echo showAlert('success', 'Subject updated successfully!');
-        } else {
-            echo showAlert('error', 'Failed to update subject. Please try again.');
-        }
-    }
-    ?>
+    <!-- Display Errors or Success Message -->
+    <?php if (isset($updateStatus)) {
+        echo showAlert($updateStatus);
+    } ?>
 
     <!-- Edit Subject Form -->
     <div class="card p-4 mb-5">
         <form method="POST">
-            <!-- Subject Code (disabled field, cannot be edited) -->
+            <!-- Subject Code (disabled) -->
             <div class="mb-3">
                 <label for="subject_code" class="form-label">Subject Code</label>
                 <input type="text" class="form-control" id="subject_code" name="subject_code" value="<?= htmlspecialchars($subject_data['subject_code']) ?>" disabled>
@@ -62,10 +49,10 @@ if (isset($_GET['subject_code'])) {
             <!-- Subject Name -->
             <div class="mb-3">
                 <label for="subject_name" class="form-label">Subject Name</label>
-                <input type="text" class="form-control" id="subject_name" name="subject_name" value="<?= htmlspecialchars($subject_data['subject_name']) ?>" required>
+                <input type="text" class="form-control" id="subject_name" name="subject_name" value="<?= htmlspecialchars($subject_data['subject_name']) ?>">
             </div>
 
-            <!-- Submit Button -->
+            <!-- Update Subject Button -->
             <button type="submit" class="btn btn-primary btn-sm w-100">Update Subject</button>
         </form>
     </div>
@@ -73,6 +60,14 @@ if (isset($_GET['subject_code'])) {
 </div>
 
 <?php
-// Include footer for the page
 include '../partials/footer.php';
+
+// Function to show success or error alerts
+function showAlert($message) {
+    $alertType = (strpos($message, 'Error') === false) ? 'success' : 'danger';
+    return '<div class="alert alert-' . $alertType . ' alert-dismissible fade show" role="alert">
+                ' . htmlspecialchars($message) . '
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>';
+}
 ?>
