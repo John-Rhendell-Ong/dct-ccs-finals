@@ -257,4 +257,93 @@ function removeSubject($subjectCode, $redirectUrl) {
 }
 
 
+// Add Subject function
+function addSubject($subject_code, $subject_name) {
+    $validateSubjectData = validateSubjectData($subject_code, $subject_name);
+    $checkDuplicate = checkDuplicateSubjectData($subject_code, $subject_name);
+
+    if (count($validateSubjectData) > 0) {
+        echo displayErrors($validateSubjectData);
+        return;
+    }
+
+    if (count($checkDuplicate) == 1) {
+        echo displayErrors($checkDuplicate);
+        return;
+    }
+
+    $conn = getConnection();
+
+    try {
+        $sql = "INSERT INTO subjects (subject_code, subject_name) VALUES (:subject_code, :subject_name)";
+        $stmt = $conn->prepare($sql);
+
+        $stmt->bindParam(':subject_code', $subject_code);
+        $stmt->bindParam(':subject_name', $subject_name);
+
+        if ($stmt->execute()) {
+            return true;
+        } else {
+            return "Failed to add subject.";
+        }
+    } catch (PDOException $e) {
+        return "Error: " . $e->getMessage();
+    }
+}
+
+
+// Validate Subject Data function
+function validateSubjectData($subject_code, $subject_name ) {
+    $errors = [];
+
+    if (empty($subject_code)) {
+        $errors[] = "Subject code is required.";
+    }
+
+    if (empty($subject_name)) {
+        $errors[] = "Subject name is required.";
+    }
+
+    return $errors;
+}
+
+// Check if subject data already exists in the database
+function checkDuplicateSubjectData($subject_code, $subject_name) {
+    $conn = getConnection();
+    try {
+        $sql = "SELECT * FROM subjects WHERE subject_code = :subject_code OR subject_name = :subject_name";
+        $stmt = $conn->prepare($sql);
+
+        $stmt->bindParam(':subject_code', $subject_code);
+        $stmt->bindParam(':subject_name', $subject_name);
+
+        $stmt->execute();
+
+        $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingSubject) {
+            return ["Subject with the given code or name already exists."];
+        }
+    } catch (PDOException $e) {
+        return ["Database error: " . $e->getMessage()];
+    }
+
+    return [];
+}
+
+// Display errors
+function displayErrors($errors) {
+    if (empty($errors)) return "";
+
+    $errorMessages = '<div class="alert alert-danger alert-dismissible fade show" role="alert"><strong>Alert</strong><ul>';
+
+    foreach ($errors as $error) {
+        $errorMessages .= '<li>' . htmlspecialchars($error) . '</li>';
+    }
+
+    $errorMessages .= '</ul><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+
+    return $errorMessages;
+}
+
 ?>
