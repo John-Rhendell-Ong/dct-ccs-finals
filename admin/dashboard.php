@@ -53,10 +53,6 @@ $failedAndPassed = calculateTotalPassedAndFailedStudents();
     </div>    
 </main>
 <!-- Template Files here -->
-<<<<<<< HEAD
-
-=======
 <?php
     require './partials/footer.php';
 ?>
->>>>>>> features/dashboard-ui
