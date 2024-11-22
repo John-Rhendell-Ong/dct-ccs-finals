@@ -26,8 +26,8 @@ $studentRegistrationUrl = '../student/register.php';
     // Handle form submission and subject insertion
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Get posted form data
-        $subjectCode = postData("subject_code");
-        $subjectName = postData("subject_name");
+        $subjectCode = $_POST["subject_code"]; // Changed here
+        $subjectName = $_POST["subject_name"]; // Changed here
 
         // Insert the subject into the database
         $result = addSubject($subjectCode, $subjectName);

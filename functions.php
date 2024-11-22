@@ -47,6 +47,11 @@ function createDatabaseConnection() {
     }
 }
 
+// Wrapper for createDatabaseConnection
+function getConnection() {
+    return createDatabaseConnection(); // Calls your existing function
+}
+
 // Function to authenticate the user login
 function authenticateUser($email, $password) {
     // Validate email and password
@@ -134,128 +139,72 @@ function guardDashboard(){
     }
 }
 
+// Fetch Subject by Subject Code
+function getSubjectByCode($subjectCode) {
+    try {
+        // Get the database connection
+        $conn = getConnection();
+
+        // SQL query to fetch the subject by subject code
+        $sql = "SELECT * FROM subjects WHERE subject_code = :subject_code";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindParam(':subject_code', $subjectCode, PDO::PARAM_STR);
+
+        // Execute the query
+        $stmt->execute();
+
+        // Fetch and return the subject data
+        $subject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $subject ? $subject : null; // If no subject is found, return null
+    } catch (PDOException $exception) {
+        // Return null in case of error
+        return null;
+    }
+}
+
+// Delete Subject
+function deleteSubject($subjectCode, $redirectUrl) {
+    try {
+        // Get the database connection
+        $conn = getConnection();
+
+        // SQL query to delete the subject by subject code
+        $sql = "DELETE FROM subjects WHERE subject_code = :subject_code";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindParam(':subject_code', $subjectCode, PDO::PARAM_STR);
+
+        // Execute the query
+        if ($stmt->execute()) {
+            // Redirect to the subject management page after successful deletion
+            header("Location: $redirectUrl");
+            exit(); // Ensure no further code is executed
+        } else {
+            // Return an error message if deletion fails
+            return false;
+        }
+    } catch (PDOException $exception) {
+        // Return false in case of any error
+        return false;
+    }
+}
+
+// Fetch Subjects
 function fetchSubjects() {
-    // Establish the database connection
     $conn = getConnection();
 
     try {
-        // SQL query to select all records from the subjects table
         $sql = "SELECT * FROM subjects";
         $stmt = $conn->prepare($sql);
-
-        // Execute the query
         $stmt->execute();
 
-        // Fetch all results as an associative array
         $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Return the subjects array
         return $subjects;
     } catch (PDOException $e) {
-        // Log the error message if needed (optional)
-        // error_log($e->getMessage());
-
-        // Return an empty array in case of error
         return [];
     }
 }
-
-function fetchStudents() {
-    // Use the existing getConnection function to establish a connection to the database
-    $dbConnection = getConnection();
-
-    try {
-        // SQL query to retrieve all student records
-        $query = "SELECT * FROM students";
-        $stmt = $dbConnection->prepare($query);
-
-        // Execute the query
-        $stmt->execute();
-
-        // Fetch all student records as an associative array
-        $studentRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the student records
-        return $studentRecords;
-    } catch (PDOException $exception) {
-        // In case of an error, return an empty array
-        return [];
-    }
-}
-
-function getStudentPassFailCounts() {
-    try {
-        // Get the database connection using the existing getConnection function
-        $dbConnection = getConnection();
-
-        // SQL query to calculate total grades and subject counts for each student
-        $query = "SELECT student_id, 
-                         SUM(grade) AS total_grades, 
-                         COUNT(subject_id) AS subject_count 
-                  FROM students_subjects 
-                  GROUP BY student_id";
-
-        // Prepare and execute the query
-        $stmt = $dbConnection->prepare($query);
-        $stmt->execute();
-
-        // Fetch all the results as an associative array
-        $studentData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Initialize counters for passed and failed students
-        $studentsPassed = 0;
-        $studentsFailed = 0;
-
-        // Iterate through each student's data
-        foreach ($studentData as $data) {
-            $averageGrade = $data['total_grades'] / $data['subject_count'];
-
-            // Count the student as passed or failed based on average grade
-            if ($averageGrade >= 75) {
-                $studentsPassed++;
-            } else {
-                $studentsFailed++; 
-            }
-        }
-
-        // Return an array with the pass and fail counts
-        return [
-            'passed' => $studentsPassed,
-            'failed' => $studentsFailed
-        ];
-    } catch (PDOException $exception) {
-        // Return an error message if something goes wrong
-        return "Error: " . $exception->getMessage();
-    }
-}
-
-function removeSubject($subjectCode, $redirectUrl) {
-    try {
-        // Establish a database connection
-        $pdoConnection = getConnection();
-
-        // Prepare the SQL query to delete the subject
-        $query = "DELETE FROM subjects WHERE subject_code = :subject_code";
-        $stmt = $pdoConnection->prepare($query);
-
-        // Bind the subject code parameter
-        $stmt->bindParam(':subject_code', $subjectCode, PDO::PARAM_STR);
-
-        // Execute the deletion query
-        if ($stmt->execute()) {
-            // Redirect to the given page after successful deletion
-            header("Location: $redirectUrl");
-            exit;
-        } else {
-            // Return an error message if deletion fails
-            return "Failed to delete the subject with code $subjectCode.";
-        }
-    } catch (PDOException $exception) {
-        // Return the error message in case of a database exception
-        return "Database error: " . $exception->getMessage();
-    }
-}
-
 
 // Add Subject function
 function addSubject($subject_code, $subject_name) {
@@ -290,7 +239,6 @@ function addSubject($subject_code, $subject_name) {
         return "Error: " . $e->getMessage();
     }
 }
-
 
 // Validate Subject Data function
 function validateSubjectData($subject_code, $subject_name ) {
@@ -346,4 +294,101 @@ function displayErrors($errors) {
     return $errorMessages;
 }
 
+function isPost() {
+    return $_SERVER['REQUEST_METHOD'] === 'POST';
+}
+
+// Function to safely retrieve POST data by key
+function postData($key) {
+    return isset($_POST[$key]) ? $_POST[$key] : null;
+}
+
+// Function to update the subject
+function updateSubject($subject_code, $subject_name, $redirectUrl) {
+    $errors = validateSubjectData($subject_code, $subject_name);
+    
+    if (count($errors) > 0) {
+        return displayErrors($errors);
+    }
+    
+    $conn = getConnection();
+    
+    try {
+        $sql = "UPDATE subjects SET subject_name = :subject_name WHERE subject_code = :subject_code";
+        $stmt = $conn->prepare($sql);
+        
+        $stmt->bindParam(':subject_name', $subject_name);
+        $stmt->bindParam(':subject_code', $subject_code);
+
+        if ($stmt->execute()) {
+            header("Location: $redirectUrl");
+            exit();
+        } else {
+            return "Failed to update the subject.";
+        }
+    } catch (PDOException $e) {
+        return "Error: " . $e->getMessage();
+    }
+}
+
+// Fetch all subjects count
+function countAllSubjects() {
+    $conn = getConnection();
+
+    try {
+        $sql = "SELECT COUNT(*) AS subject_count FROM subjects";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['subject_count'];
+    } catch (PDOException $e) {
+        return 0;
+    }
+}
+
+// Fetch all students count
+function countAllStudents() {
+    $conn = getConnection();
+
+    try {
+        $sql = "SELECT COUNT(*) AS student_count FROM students";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['student_count'];
+    } catch (PDOException $e) {
+        return 0;
+    }
+}
+
+// Calculate passed and failed students
+function calculateTotalPassedAndFailedStudents() {
+    $conn = getConnection();
+
+    try {
+        // Get the number of students who passed (assuming a passing grade of 50% or higher)
+        $sqlPassed = "SELECT COUNT(*) AS passed FROM students WHERE average_grade >= 50";
+        $stmt = $conn->prepare($sqlPassed);
+        $stmt->execute();
+        $passed = $stmt->fetch(PDO::FETCH_ASSOC)['passed'];
+
+        // Get the number of students who failed
+        $sqlFailed = "SELECT COUNT(*) AS failed FROM students WHERE average_grade < 50";
+        $stmt = $conn->prepare($sqlFailed);
+        $stmt->execute();
+        $failed = $stmt->fetch(PDO::FETCH_ASSOC)['failed'];
+
+        return [
+            'passed' => $passed,
+            'failed' => $failed
+        ];
+    } catch (PDOException $e) {
+        return [
+            'passed' => 0,
+            'failed' => 0
+        ];
+    }
+}
 ?>
