@@ -1,26 +1,35 @@
 <?php
-include '../../functions.php'; // Include the functions
+// Include necessary files and functions
+include '../../functions.php';
 include '../partials/header.php';
 
-// Pages
+// Redirect pages for logout and navigation
 $logoutPage = '../logout.php';
 $dashboardPage = '../dashboard.php';
 $studentPage = '../student/register.php';
 $subjectPage = './add.php';
+
+// Include sidebar
 include '../partials/side-bar.php';
 
-// Get the subject data based on subject code
-$subject_data = getSubjectByCode($_GET['subject_code']);
+// Fetch subject data based on the subject code from the query string
+$subjectCode = $_GET['subject_code'] ?? null;
+$subjectData = null;
 
-// Handle form submission to update the subject
-if (isPost()) {
-    $subject_code = $subject_data['subject_code'];
-    $subject_name = postData('subject_name');
-    $updateStatus = updateSubject($subject_code, $subject_name, $subjectPage);
+if ($subjectCode) {
+    $subjectData = getSubjectByCode($subjectCode);
+}
+
+// Handle subject update when form is submitted
+if (isPost() && $subjectData) {
+    $subjectName = postData('subject_name');
+    updateSubject($subjectData['subject_code'], $subjectName, './add.php');
 }
 ?>
 
+<!-- Content Area -->
 <div class="col-md-9 col-lg-10">
+
     <h3 class="text-left mb-5 mt-5">Edit Subject</h3>
 
     <!-- Breadcrumb Navigation -->
@@ -32,42 +41,33 @@ if (isPost()) {
         </ol>
     </nav>
 
-    <!-- Display Errors or Success Message -->
-    <?php if (isset($updateStatus)) {
-        echo showAlert($updateStatus);
-    } ?>
-
     <!-- Edit Subject Form -->
-    <div class="card p-4 mb-5">
-        <form method="POST">
-            <!-- Subject Code (disabled) -->
-            <div class="mb-3">
-                <label for="subject_code" class="form-label">Subject Code</label>
-                <input type="text" class="form-control" id="subject_code" name="subject_code" value="<?= htmlspecialchars($subject_data['subject_code']) ?>" disabled>
-            </div>
+    <?php if ($subjectData): ?>
+        <div class="card p-4 mb-5">
+            <form method="POST">
+                <!-- Subject Code (disabled) -->
+                <div class="mb-3">
+                    <label for="subject_code" class="form-label">Subject Code</label>
+                    <input type="text" class="form-control" id="subject_code" name="subject_code" value="<?= htmlspecialchars($subjectData['subject_code']) ?>" disabled>
+                </div>
 
-            <!-- Subject Name -->
-            <div class="mb-3">
-                <label for="subject_name" class="form-label">Subject Name</label>
-                <input type="text" class="form-control" id="subject_name" name="subject_name" value="<?= htmlspecialchars($subject_data['subject_name']) ?>">
-            </div>
+                <!-- Subject Name -->
+                <div class="mb-3">
+                    <label for="subject_name" class="form-label">Subject Name</label>
+                    <input type="text" class="form-control" id="subject_name" name="subject_name" value="<?= htmlspecialchars($subjectData['subject_name']) ?>">
+                </div>
 
-            <!-- Update Subject Button -->
-            <button type="submit" class="btn btn-primary btn-sm w-100">Update Subject</button>
-        </form>
-    </div>
+                <!-- Update Subject Button -->
+                <button type="submit" class="btn btn-primary btn-sm w-100">Update Subject</button>
+            </form>
+        </div>
+    <?php else: ?>
+        <p class="text-danger">Subject not found or invalid subject code.</p>
+    <?php endif; ?>
 
 </div>
 
 <?php
+// Include footer partial
 include '../partials/footer.php';
-
-// Function to show success or error alerts
-function showAlert($message) {
-    $alertType = (strpos($message, 'Error') === false) ? 'success' : 'danger';
-    return '<div class="alert alert-' . $alertType . ' alert-dismissible fade show" role="alert">
-                ' . htmlspecialchars($message) . '
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>';
-}
 ?>
